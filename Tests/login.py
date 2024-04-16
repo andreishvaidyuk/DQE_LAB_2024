@@ -1,48 +1,37 @@
-import unittest
 import os
-from configparser import ConfigParser
+import sys
+import yaml
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
-
+import pytest
 from Pages.incomeStatementsReportPage import IncomeStatementsReportPage
 
-config_object = ConfigParser()
-fileDir = os.path.dirname(os.path.realpath('__file__'))
-filename = os.path.join(fileDir, '../Configs/config.ini')
-config_object.read(filename)
 
-selenium_config = config_object["POWERBI_MICROSOFT_REPORT"]
-report_uri = selenium_config["report_uri"]
-delay = int(selenium_config["delay"])
+def get_selenium_config(config_name):
+    module_dir = os.path.dirname(os.path.abspath(sys.modules[__name__].__file__))
+    parent_dir = os.path.dirname(module_dir)
+    with open(os.path.join(parent_dir, 'Configs', config_name), 'r') as stream:
+        config = yaml.safe_load(stream)
+    return config['global']
 
 
-class ReportTest(unittest.TestCase):
+@pytest.fixture(scope="function")
+def open_income_statements_report_webpage():
+    report_uri = get_selenium_config('config_selenium.yaml')['report_uri']
+    delay = get_selenium_config('config_selenium.yaml')['delay']
+    driver = webdriver.Chrome(ChromeDriverManager().install())
+    driver.set_window_size(1024, 600)
+    driver.maximize_window()
+    driver.get(report_uri)
 
-    driver = None
+    income_report = IncomeStatementsReportPage(driver, delay)
+    income_report.open_power_bi_report()
+    yield income_report
+    driver.close()
 
-    @classmethod
-    def setUpClass(cls):
-        cls.driver = webdriver.Chrome(ChromeDriverManager().install())
-        cls.driver.set_window_size(1024, 600)
-        cls.driver.maximize_window()
-        cls.driver.get(report_uri)
 
-        income_report = IncomeStatementsReportPage(cls.driver, delay)
-        income_report.open_power_bi_report()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.driver.close()
-        print('Tests are completed')
-
-    def test_01_open_decomposition_tree_visualization(self):
-        report_page = IncomeStatementsReportPage(self.driver, delay)
-        report_page.switch_to_report_frame()
-        report_title = report_page.get_revenue_report_title()
-        assert report_title == 'REVENUE (in billions)'
-
-    def test_02_your_test_name(self):
-        pass
-
-    def test_03_your_test_name(self):
-        pass
+def test_01_open_decomposition_tree_visualization(open_income_statements_report_webpage):
+    report_page = open_income_statements_report_webpage
+    report_page.switch_to_report_frame()
+    report_title = report_page.get_revenue_report_title()
+    assert report_title == 'REVENUE (in billions)'

@@ -1,0 +1,21 @@
+smoke_tests:
+  - name: Completness check for DIM_STORES table
+    sql: "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'bl_dm' AND TABLE_NAME = 'dim_stores';"
+    expected: 1
+  - name: Check column presence
+    sql: "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'dim_products' AND COLUMN_NAME = 'product_name';"
+    expected: 1
+  - name: Check row count
+    sql: "SELECT COUNT(*) FROM bl_dm.dim_customers_scd;"
+    expected: 105
+
+critical_tests:
+  - name: Check data types
+    sql: "SELECT data_type FROM information_schema.columns WHERE table_name = 'dim_customers_scd' AND column_name = 'customer_name';"
+    expected: "character varying"
+  - name: Check NOT NULL constraint
+    sql: "SELECT COUNT(*) FROM bl_dm.dim_stores WHERE store_address_id IS NOT NULL;"
+    expected: 71
+  - name: Check row count
+    sql: "SELECT COUNT(*) FROM bl_dm.dim_customers_scd WHERE customer_surr_id IS NULL;"
+    expected: 0
